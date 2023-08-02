@@ -2,8 +2,8 @@ import express from "express";
 import * as dotenv from "dotenv";
 import dbConnection from "./db.js";
 import AuthRouter from "./Controllers/AuthController.js";
+import ConnectMongoDBSession from "connect-mongodb-session";
 import session from "express-session";
-import mongoDbSession from "connect-mongodb-session";
 
 
 //database and dotenc initialisation
@@ -12,28 +12,24 @@ dotenv.config();
 
 //middlewares
 app.use(express.json());
-// app.set('views', `${__dirname}/views`);
-// app.use(express.static(`${__dirname}/public`));
 app.set("view engine", "ejs");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-
-const mongo_db_session = mongoDbSession(session);
-const store = new mongo_db_session({
+const MongoStore = new ConnectMongoDBSession(session)
+const store = new MongoStore({
   uri: process.env.MONGO_URI,
-  collection: "sessions",
-});
+  collections: "sessions",
+})
 
-app.use(
-  session({
-    secret: process.env.SECRET_KEY,
+app.use(session({
+  secret: process.env.SECRET_KEY,
     resave: false,
-    saveUninitialized: false,
+    saveUinitialized: false,
     store: store,
-  })
-);
+}))
+
 
 //home route
 app.get("/", (req, res) => {
@@ -50,9 +46,9 @@ app.get("/auth/login", (req, res) => {
   return res.render("login");
 });
 
-//change-password route
+// //change-password route
 app.get("/auth/change-password", (req, res) => {
-  return res.render("changingPassword");
+  return res.render("change-password");
 });
 
 //forget-password route
@@ -60,7 +56,7 @@ app.get("/auth/forget-password",(req,res)=>{
   return res.render("forgot-password")
 })
 
-//dashboard route
+// //dashboard route
 
 
 //routes
@@ -73,3 +69,7 @@ app.listen(PORT, (req, res) => {
 
 //db connection function
 dbConnection();
+
+
+// THb9CO8DgLWAkYuILVzQPNaVYfO4SDwo
+// 3ApYzbWdZYyWM5-Sh9Em1I81V5deUrwQ

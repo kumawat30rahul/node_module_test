@@ -61,6 +61,8 @@ const userModel = class {
     })
   }
 
+
+
   static loginUser({loginId,password}){
     return new Promise(async (resolve, reject) => {
         //finding the user with loginId
@@ -87,7 +89,7 @@ const userModel = class {
       });
   }
 
-  static forgotPassword({loginId,newpassword}){
+  static forgetPassword({loginId,newpassword}){
     return new Promise(async (resolve,reject)=>{
       try {
         const userDb = await UserSchema.findOne({

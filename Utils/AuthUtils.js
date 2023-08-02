@@ -61,8 +61,6 @@ const emailVerificationToken = ({email,verificationToken}) => {
 }
 
 const forgotpasswordEmailVerification=({email,verificationToken})=>{
-  console.log("authutils",email);
-  console.log("authutils<<>><<>><<>><<>>",verificationToken);
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 465,

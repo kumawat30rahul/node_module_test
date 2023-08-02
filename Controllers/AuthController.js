@@ -1,10 +1,10 @@
 import express from "express";
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 import {
   cleanUpAndValidate,
   emailVerificationToken,
   generateJWTToken,
-  forgotpasswordEmailVerification
+  forgotpasswordEmailVerification,
 } from "../Utils/AuthUtils.js";
 import { userModel } from "../Models/UserModel.js";
 import UserSchema from "../Schema/UserSchema.js";
@@ -65,6 +65,8 @@ AuthRouter.post("/register", async (req, res) => {
 //login route
 AuthRouter.post("/login", async (req, res) => {
   const { loginId, password } = req.body;
+  console.log("loginId", loginId);
+  console.log("password", password);
 
   if (!loginId || !password) {
     return res.send({
@@ -73,15 +75,18 @@ AuthRouter.post("/login", async (req, res) => {
     });
   }
 
- 
-
-
+  // return res.send(true)
   try {
-    
+    console.log(loginId,password);
     const userDb = await userModel.loginUser({ loginId, password });
-    console.log(userDb._id);
-    console.log(req.session.id);
 
+    if (userDb.emailAuthenticated === false) {
+      return res.send({
+        status: 400,
+        message: "Please verfiy your email first",
+      });
+    }
+ 
     // implementing session based authentication
     req.session.isAuth = true;
 
@@ -90,8 +95,8 @@ AuthRouter.post("/login", async (req, res) => {
       username: userDb.username,
       userId: userDb._id,
     };
-
-    return res.redirect("/auth/dashboard")
+    return res.send("logined");
+    // return res.redirect("/auth/dashboard")
   } catch (error) {
     return res.send({
       status: 500,
@@ -101,49 +106,44 @@ AuthRouter.post("/login", async (req, res) => {
   }
 });
 
-// const verificationToken = generateJWTToken(loginId);
-// console.log(verificationToken);
-//sent mail function
-// emailVerificationToken({ loginId, verificationToken });
 
-// return res.send({
-//   status: 200,
-//   message:
-//     "Link has been sent forgot password",
-// });
+AuthRouter.post("/forget-password", async (req, res) => {
+  const { loginId } = req.body;
+  console.log("this is login id========", loginId);
 
-AuthRouter.post("/forget-password", async (req,res)=>{
-  console.log(req.body);
-  const {loginId} = req.body
-  console.log("thid is login id========",loginId);
   try {
-    const userDb = await UserSchema.findOne({email: loginId})
-    console.log(userDb);
-    if(userDb){
-      const verificationToken = generateJWTToken(loginId);
-      console.log(verificationToken);
-      //sent mail function
-      forgotpasswordEmailVerification({email: loginId, verificationToken });
-    }else{
-      return res.send({
-        status: 400,
-        message: "User Not found"
-      })
-    }
-    alert("link sent")
-  } catch (error) {
-    return res.send({
-      status: 400,
-      message: "User Not found with this email",
-      error: error
-    })
-  }
+    const userDb = await UserSchema.findOne({ email: loginId });
+    console.log("userDb:", userDb); // Add this line for debugging
 
-})
+    if (userDb) {
+      const verificationToken = generateJWTToken(loginId);
+      forgotpasswordEmailVerification({ email: loginId, verificationToken });
+      console.log("Email sent successfully");
+      res.status(200).json({ message: `Link Sent To ${loginId}` });
+    } else {
+      console.log("User not found");
+      res.status(404).json({ message: "User Not found" });
+    }
+  } catch (error) {
+    console.error("Error during password reset:", error);
+    res.status(500).json({
+      message: "An error occurred during password reset.",
+      error: error.message,
+    });
+  }
+});
 
 AuthRouter.post("/change-password",async (req,res)=>{
   console.log(req.body);
-  const {loginId,newpassword} = req.body
+  const {loginId,newpassword,confirmpassword} = req.body
+
+  if(newpassword !== confirmpassword){
+    return res.send({
+      status: 400,
+      message: "Password Does not match"
+    })
+  }
+
   if (!loginId || !newpassword) {
     return res.send({
       status: 400,
@@ -151,8 +151,9 @@ AuthRouter.post("/change-password",async (req,res)=>{
     });
   }
   try {
-    const userDb = await userModel.forgotPassword({loginId,newpassword})
-    
+    const userDb = await userModel.forgetPassword({loginId,newpassword})
+
+    // console.log("userDb",userDb);
     return res.redirect("/auth/login")
   } catch (error) {
     return res.send({
@@ -163,39 +164,42 @@ AuthRouter.post("/change-password",async (req,res)=>{
   }
 })
 
-AuthRouter.get("/verification/:token",(req,res)=>{
+AuthRouter.get("/verification/:token", (req, res) => {
   const verificationToken = req.params.token;
   console.log(verificationToken);
-  jwt.verify(verificationToken,process.env.SECRET_KEY,async(err,decoded)=>{
-    try {
-      const userDb = await UserSchema.findOneAndUpdate(
-        { email: decoded },
-        { emailAuthenticated: true }
-      );
-      console.log(userDb);
-      return res.status(200).redirect("/auth/login");
-      
-    } catch (error) {
-      res.send({
-        status: 500,
-        message: "database error",
-        error: error,
-      });
-  }
-})
-})
+  jwt.verify(
+    verificationToken,
+    process.env.SECRET_KEY,
+    async (err, decoded) => {
+      try {
+        const userDb = await UserSchema.findOneAndUpdate(
+          { email: decoded },
+          { emailAuthenticated: true }
+        );
+        console.log(userDb);
+        return res.status(200).redirect("/auth/login");
+      } catch (error) {
+        res.send({
+          status: 500,
+          message: "database error",
+          error: error,
+        });
+      }
+    }
+  );
+});
 AuthRouter.get("/forgotPasswordVerification/:token",(req,res)=>{
   const verificationToken = req.params.token;
   console.log(verificationToken);
   jwt.verify(verificationToken,process.env.SECRET_KEY,async(err,decoded)=>{
     try {
-      const userDb = await UserSchema.findOneAndUpdate(
+      const userDb = await UserSchema.findOne(
         { email: decoded },
-        { emailAuthenticated: true }
       );
+      console.log("decoded",decoded);
       console.log(userDb);
-      return res.status(200).redirect("/auth/change-password");
-      
+      return res.status(200).redirect(`/auth/change-password`);
+
     } catch (error) {
       res.send({
         status: 500,
