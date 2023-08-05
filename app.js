@@ -5,6 +5,7 @@ import AuthRouter from "./Controllers/AuthController.js";
 import ConnectMongoDBSession from "connect-mongodb-session";
 import session from "express-session";
 import BookRouter from "./Controllers/BookController.js";
+import { isAuth } from "./Middlewares/isAuth.js";
 
 
 //database and dotenc initialisation
@@ -33,7 +34,7 @@ app.use(session({
 
 //home route
 app.get("/", (req, res) => {
-  return res.send(true);
+  return res.redirect("/register");
 });
 
 //register route
@@ -61,7 +62,7 @@ app.get(("/resend-verification") , (req,res) =>{
  return res.render("resend-verification")
 })
 // //dashboard route
-app.get(("/dashboard"),(req,res)=>{
+app.get(("/dashboard"),isAuth,(req,res)=>{
  return res.render("dashboard")
 })
 
