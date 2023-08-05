@@ -115,6 +115,22 @@ const userModel = class {
       }
     })
   }
-};
+  
+  static resendVerificationLink({loginId}){
+    return new Promise(async (resolve,reject)=>{
+      try {
+        const userDb = await UserSchema.findOne({email: loginId});
 
+        if(!userDb){
+          reject("User Not Found")
+        }
+
+        resolve()
+      } catch (error) {
+        reject("Some Error Occured")
+      }
+    })
+  }
+  
+};
 export { userModel };

@@ -8,6 +8,7 @@ import {
 } from "../Utils/AuthUtils.js";
 import { userModel } from "../Models/UserModel.js";
 import UserSchema from "../Schema/UserSchema.js";
+import alert from 'alert'
 
 const AuthRouter = express.Router();
 
@@ -40,11 +41,8 @@ AuthRouter.post("/register", async (req, res) => {
         //sent mail function
         emailVerificationToken({ email, verificationToken });
 
-        return res.send({
-          status: 200,
-          message:
-            "Registeration done, Link has been sent to your email id plz verify before login",
-        });
+        alert("Registeration done, Link has been sent to your email id plz verify before login")
+        return res.redirect("/login");
       } catch (error) {
         return res.send({
           status: 500,
@@ -77,7 +75,7 @@ AuthRouter.post("/login", async (req, res) => {
 
   // return res.send(true)
   try {
-    console.log(loginId,password);
+    console.log(loginId, password);
     const userDb = await userModel.loginUser({ loginId, password });
 
     if (userDb.emailAuthenticated === false) {
@@ -86,7 +84,7 @@ AuthRouter.post("/login", async (req, res) => {
         message: "Please verfiy your email first",
       });
     }
- 
+
     // implementing session based authentication
     req.session.isAuth = true;
 
@@ -95,8 +93,8 @@ AuthRouter.post("/login", async (req, res) => {
       username: userDb.username,
       userId: userDb._id,
     };
-    return res.send("logined");
-    // return res.redirect("/auth/dashboard")
+    // return res.send("logined");
+    return res.redirect("/dashboard");
   } catch (error) {
     return res.send({
       status: 500,
@@ -105,7 +103,6 @@ AuthRouter.post("/login", async (req, res) => {
     });
   }
 });
-
 
 AuthRouter.post("/forget-password", async (req, res) => {
   const { loginId } = req.body;
@@ -119,6 +116,8 @@ AuthRouter.post("/forget-password", async (req, res) => {
       const verificationToken = generateJWTToken(loginId);
       forgotpasswordEmailVerification({ email: loginId, verificationToken });
       console.log("Email sent successfully");
+      alert("Forgot Password Email sent successfully")
+
       res.status(200).json({ message: `Link Sent To ${loginId}` });
     } else {
       console.log("User not found");
@@ -133,15 +132,15 @@ AuthRouter.post("/forget-password", async (req, res) => {
   }
 });
 
-AuthRouter.post("/change-password",async (req,res)=>{
+AuthRouter.post("/change-password", async (req, res) => {
   console.log(req.body);
-  const {loginId,newpassword,confirmpassword} = req.body
+  const { loginId, newpassword, confirmpassword } = req.body;
 
-  if(newpassword !== confirmpassword){
+  if (newpassword !== confirmpassword) {
     return res.send({
       status: 400,
-      message: "Password Does not match"
-    })
+      message: "Password Does not match",
+    });
   }
 
   if (!loginId || !newpassword) {
@@ -151,18 +150,48 @@ AuthRouter.post("/change-password",async (req,res)=>{
     });
   }
   try {
-    const userDb = await userModel.forgetPassword({loginId,newpassword})
+    const userDb = await userModel.forgetPassword({ loginId, newpassword });
 
     // console.log("userDb",userDb);
-    return res.redirect("/auth/login")
+    alert("Passwd Changed successfully")
+    return res.redirect("/login");
   } catch (error) {
     return res.send({
       status: 400,
       message: "password not changed",
-      error: error
-    })
+      error: error,
+    });
   }
-})
+});
+
+AuthRouter.post("/resend-verificationLink", async (req, res) => {
+  console.log(req.body);
+  const { loginId } = req.body;
+  if (!loginId) {
+    return res.send({
+      status: 400,
+      message: "Please Provide proper email",
+    });
+  }
+  try {
+    const userDb = await userModel.resendVerificationLink({ loginId });
+    const verificationToken = generateJWTToken(loginId);
+    console.log(verificationToken);
+
+    //sent mail function
+    emailVerificationToken({ email: loginId, verificationToken });
+
+    alert("Link has been sent to your email id plz verify before login")
+    return res.redirect('/login')
+
+  } catch (error) {
+    return res.send({
+      status: 400,
+      message: "Some Error Occured",
+      error: error,
+    });
+  }
+});
 
 AuthRouter.get("/verification/:token", (req, res) => {
   const verificationToken = req.params.token;
@@ -177,7 +206,7 @@ AuthRouter.get("/verification/:token", (req, res) => {
           { emailAuthenticated: true }
         );
         console.log(userDb);
-        return res.status(200).redirect("/auth/login");
+        return res.status(200).redirect("/login");
       } catch (error) {
         res.send({
           status: 500,
@@ -188,26 +217,27 @@ AuthRouter.get("/verification/:token", (req, res) => {
     }
   );
 });
-AuthRouter.get("/forgotPasswordVerification/:token",(req,res)=>{
+AuthRouter.get("/forgotPasswordVerification/:token", (req, res) => {
   const verificationToken = req.params.token;
   console.log(verificationToken);
-  jwt.verify(verificationToken,process.env.SECRET_KEY,async(err,decoded)=>{
-    try {
-      const userDb = await UserSchema.findOne(
-        { email: decoded },
-      );
-      console.log("decoded",decoded);
-      console.log(userDb);
-      return res.status(200).redirect(`/auth/change-password`);
-
-    } catch (error) {
-      res.send({
-        status: 500,
-        message: "database error",
-        error: error,
-      });
-  }
-})
-})
+  jwt.verify(
+    verificationToken,
+    process.env.SECRET_KEY,
+    async (err, decoded) => {
+      try {
+        const userDb = await UserSchema.findOne({ email: decoded });
+        console.log("decoded", decoded);
+        console.log(userDb);
+        return res.status(200).redirect(`/change-password`);
+      } catch (error) {
+        res.send({
+          status: 500,
+          message: "database error",
+          error: error,
+        });
+      }
+    }
+  );
+});
 
 export default AuthRouter;
