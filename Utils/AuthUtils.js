@@ -53,7 +53,7 @@ const emailVerificationToken = ({email,verificationToken}) => {
     from: "Module Test",
     to: email,
     subject: "Email Verification token for module test",
-    html: `Click <a href="http://localhost:8000/verification/${verificationToken}">Here!!</a>`,
+    html: `Click <a href="https://nodemoduletest-production.up.railway.app/verification/${verificationToken}">Here!!</a>`,
   }
   transporter.sendMail(mailOptions, function (err, response) {
     if (err) throw err;
@@ -77,7 +77,7 @@ const forgotpasswordEmailVerification=({email,verificationToken})=>{
     from: "Module Test",
     to: email,
     subject: "Email Verification token for module test forgot password",
-    html: `Click <a href="http://localhost:8000/forgotPasswordVerification/${verificationToken}">Here!!</a>`,
+    html: `Click <a href="https://nodemoduletest-production.up.railway.app/forgotPasswordVerification/${verificationToken}">Here!!</a>`,
   }
   transporter.sendMail(mailOptions, function (err, response) {
     if (err) throw err;
